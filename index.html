@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense &amp; Budget Visualizer</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <!-- Chart.js CDN (Req 5.5) -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js"
+      onerror="window.__chartJsLoadFailed = true; document.dispatchEvent(new Event('chartjs-load-error'));"
+    ></script>
+  </head>
+  <body>
+    <!-- Persistent storage-error banner (hidden by default) -->
+    <div id="storage-error-banner" class="error-banner hidden" role="alert" aria-live="polite"></div>
+
+    <div class="app-container">
+      <header class="app-header">
+        <h1>Expense &amp; Budget Visualizer</h1>
+      </header>
+
+      <main>
+        <!-- Balance Section (Req 4.1 — first visible element) -->
+        <section id="balance-section" class="card" aria-label="Total balance">
+          <div id="balance-container"></div>
+        </section>
+
+        <!-- Transaction Form Section (Req 1.1) -->
+        <section id="form-section" class="card" aria-label="Add transaction">
+          <h2>Add Transaction</h2>
+          <div id="form-container"></div>
+        </section>
+
+        <!-- Category Manager Section (Req 6.1) -->
+        <section id="category-section" class="card" aria-label="Manage categories">
+          <h2>Add Category</h2>
+          <div id="category-container"></div>
+        </section>
+
+        <!-- Sort Control + Transaction List Section (Req 8.1, 2.1) -->
+        <section id="list-section" class="card" aria-label="Transaction list">
+          <div class="list-header">
+            <h2>Transactions</h2>
+            <div id="sort-container" class="sort-control"></div>
+          </div>
+          <!-- Scrollable transaction list container (Req 2.3) -->
+          <div id="transaction-list-container" class="transaction-list-container"></div>
+        </section>
+
+        <!-- Chart Section (Req 5.1) -->
+        <section id="chart-section" class="card" aria-label="Spending distribution chart">
+          <h2>Spending by Category</h2>
+          <div id="chart-container">
+            <canvas id="spending-chart" aria-label="Pie chart showing spending by category" role="img"></canvas>
+          </div>
+        </section>
+
+        <!-- Monthly Summary Section (Req 7.1) -->
+        <section id="summary-section" class="card" aria-label="Monthly summary">
+          <h2>Monthly Summary</h2>
+          <div id="summary-container"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/app.js" defer></script>
+  </body>
+</html>

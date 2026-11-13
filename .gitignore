@@ -1,0 +1,8 @@
+{"specId": "82589e9c-2cde-4766-95b4-6603a392bb21", "workflowType": "requirements-first", "specType": "feature"}
+node_modules/
+dist/
+build/
+.env
+.env.*
+.DS_Store
+Thumbs.db

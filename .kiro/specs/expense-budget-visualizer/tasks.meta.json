@@ -1,0 +1,55 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Set up project structure and entry point": [
+      {
+        "executionId": "8362fd58-e485-4198-86b5-d56b51cd9e76",
+        "chatSessionId": "sess_5cd0b6b4-d479-4ac5-b3de-7bb9a617dfc8",
+        "timestamp": 1794564370083
+      },
+      {
+        "executionId": "8362fd58-e485-4198-86b5-d56b51cd9e76",
+        "chatSessionId": "sess_5cd0b6b4-d479-4ac5-b3de-7bb9a617dfc8",
+        "timestamp": 1794564606934
+      }
+    ],
+    "2.1 Implement `LocalStorageAdapter`": [
+      {
+        "executionId": "982c2acc-8fac-47fb-91db-543ab912ce96",
+        "chatSessionId": "sess_23a0b7ea-b1fd-482c-8d15-1ce3bde46177",
+        "timestamp": 1794564618894
+      },
+      {
+        "executionId": "982c2acc-8fac-47fb-91db-543ab912ce96",
+        "chatSessionId": "sess_23a0b7ea-b1fd-482c-8d15-1ce3bde46177",
+        "timestamp": 1794564656155
+      }
+    ],
+    "2.3 Implement `StateManager` — transaction operations": [
+      {
+        "executionId": "8d39faa3-2e62-4853-99d4-6ecab3592a31",
+        "chatSessionId": "sess_cd293e5f-50b4-4ee2-8c06-4e485dbee76b",
+        "timestamp": 1794564895113
+      }
+    ],
+    "2.6 Implement `StateManager` — category operations and derived data": [
+      {
+        "executionId": "df41034e-dae0-469c-8f92-60df27f2e567",
+        "chatSessionId": "sess_b3adc6d5-bb1b-4652-a544-4638345272ed",
+        "timestamp": 1794565079059
+      },
+      {
+        "executionId": "df41034e-dae0-469c-8f92-60df27f2e567",
+        "chatSessionId": "sess_b3adc6d5-bb1b-4652-a544-4638345272ed",
+        "timestamp": 1794565479605
+      }
+    ],
+    "2.10 Implement `StateManager` — `subscribe`, `load`, and storage-error state": [
+      {
+        "executionId": "03a28722-f434-4d19-89b5-93d51817c6d9",
+        "chatSessionId": "sess_2e6f867d-9b85-47ae-93a9-83f8533db64f",
+        "timestamp": 1794565498188
+      }
+    ]
+  }
+}
