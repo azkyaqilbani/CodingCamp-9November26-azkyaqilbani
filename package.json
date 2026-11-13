@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "expense-budget-visualizer",
   "version": "1.0.0",
   "description": "Client-side expense tracker with Chart.js visualization",
@@ -7,7 +7,6 @@
     "test": "vitest --run"
   },
   "devDependencies": {
-    "fast-check": "3.22.0",
     "vitest": "2.1.9"
   }
 }
