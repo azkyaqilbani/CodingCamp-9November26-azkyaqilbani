@@ -1,69 +1,238 @@
+
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Expense &amp; Budget Visualizer</title>
-    <link rel="stylesheet" href="css/styles.css" />
-    <!-- Chart.js CDN (Req 5.5) -->
-    <script
-      src="https://cdn.jsdelivr.net/npm/chart.js"
-      onerror="window.__chartJsLoadFailed = true; document.dispatchEvent(new Event('chartjs-load-error'));"
-    ></script>
-  </head>
-  <body>
-    <!-- Persistent storage-error banner (hidden by default) -->
-    <div id="storage-error-banner" class="error-banner hidden" role="alert" aria-live="polite"></div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track your monthly expenses and manage your budget.">
+  <title>Expense & Budget Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div class="app-container">
 
-    <div class="app-container">
-      <header class="app-header">
-        <h1>Expense &amp; Budget Visualizer</h1>
-      </header>
+    <!-- Application Header -->
+    <header class="app-header">
+      <div>
+        <h1>Expense & Budget Tracker</h1>
+        <p>Keep track of your spending and stay within your budget.</p>
+      </div>
+    </header>
 
-      <main>
-        <!-- Balance Section (Req 4.1 — first visible element) -->
-        <section id="balance-section" class="card" aria-label="Total balance">
-          <div id="balance-container"></div>
-        </section>
+    <main>
+      <!-- Monthly Navigation -->
+      <section class="month-navigation" aria-label="Month navigation">
+        <button type="button" id="prev-month" aria-label="Previous month">
+          &larr;
+        </button>
 
-        <!-- Transaction Form Section (Req 1.1) -->
-        <section id="form-section" class="card" aria-label="Add transaction">
-          <h2>Add Transaction</h2>
-          <div id="form-container"></div>
-        </section>
+        <h2 id="selected-month">November 2026</h2>
 
-        <!-- Category Manager Section (Req 6.1) -->
-        <section id="category-section" class="card" aria-label="Manage categories">
-          <h2>Add Category</h2>
-          <div id="category-container"></div>
-        </section>
+        <button type="button" id="next-month" aria-label="Next month">
+          &rarr;
+        </button>
 
-        <!-- Sort Control + Transaction List Section (Req 8.1, 2.1) -->
-        <section id="list-section" class="card" aria-label="Transaction list">
-          <div class="list-header">
-            <h2>Transactions</h2>
-            <div id="sort-container" class="sort-control"></div>
+        <button type="button" id="current-month">
+          Today
+        </button>
+      </section>
+
+      <!-- Monthly Expense Overview -->
+      <section class="overview-section" aria-labelledby="overview-heading">
+        <h2 id="overview-heading">Monthly Overview</h2>
+
+        <div class="overview-card">
+          <p>Total Expenses</p>
+          <p id="monthly-expenses">Rp0,00</p>
+        </div>
+      </section>
+
+      <!-- Monthly Budget -->
+      <section class="budget-section" aria-labelledby="budget-heading">
+        <h2 id="budget-heading">Monthly Budget</h2>
+
+        <div class="budget-card">
+          <div>
+            <p>Budget</p>
+            <p id="budget-amount">No budget set</p>
           </div>
-          <!-- Scrollable transaction list container (Req 2.3) -->
-          <div id="transaction-list-container" class="transaction-list-container"></div>
-        </section>
 
-        <!-- Chart Section (Req 5.1) -->
-        <section id="chart-section" class="card" aria-label="Spending distribution chart">
-          <h2>Spending by Category</h2>
-          <div id="chart-container">
-            <canvas id="spending-chart" aria-label="Pie chart showing spending by category" role="img"></canvas>
+          <div>
+            <p>Remaining Budget</p>
+            <p id="remaining-budget">—</p>
           </div>
-        </section>
 
-        <!-- Monthly Summary Section (Req 7.1) -->
-        <section id="summary-section" class="card" aria-label="Monthly summary">
-          <h2>Monthly Summary</h2>
-          <div id="summary-container"></div>
-        </section>
-      </main>
-    </div>
+          <p id="budget-status" role="status" aria-live="polite">
+            Set a budget to start monitoring your spending.
+          </p>
 
-    <script src="js/app.js" defer></script>
-  </body>
+          <button type="button" id="open-budget-form">
+            Set Budget
+          </button>
+
+          <form id="budget-form" hidden>
+            <label for="budget-input">Monthly budget (IDR)</label>
+            <input
+              type="number"
+              id="budget-input"
+              min="0.01"
+              step="0.01"
+              required
+            >
+
+            <p id="budget-error" class="form-error" aria-live="polite"></p>
+
+            <button type="submit">Save Budget</button>
+            <button type="button" id="cancel-budget-form">Cancel</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Add Transaction -->
+      <section class="transaction-form-section" aria-labelledby="transaction-form-heading">
+        <h2 id="transaction-form-heading">Add Expense</h2>
+
+        <form id="transaction-form">
+          <div class="form-group">
+            <label for="transaction-item">Item / Description</label>
+            <input
+              type="text"
+              id="transaction-item"
+              name="item"
+              maxlength="100"
+              required
+              placeholder="e.g. Lunch at cafe"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="transaction-amount">Amount (IDR)</label>
+            <input
+              type="number"
+              id="transaction-amount"
+              name="amount"
+              min="0.01"
+              step="0.01"
+              required
+              placeholder="e.g. 25000"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="transaction-category">Category</label>
+            <select id="transaction-category" name="category" required>
+              <option value="">Select a category</option>
+              <option value="Food">Food</option>
+              <option value="Transport">Transport</option>
+              <option value="Fun">Fun</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="transaction-date">Date</label>
+            <input
+              type="date"
+              id="transaction-date"
+              name="date"
+              required
+            >
+          </div>
+
+          <p id="transaction-error" class="form-error" aria-live="polite"></p>
+
+          <button type="submit">Add Expense</button>
+        </form>
+      </section>
+
+      <!-- Spending Distribution -->
+      <section class="chart-section" aria-labelledby="chart-heading">
+        <h2 id="chart-heading">Spending Distribution</h2>
+
+        <div id="chart-container">
+          <canvas id="spending-chart" aria-label="Spending distribution by category" role="img"></canvas>
+          <p id="chart-empty-state">No expenses recorded for this month yet.</p>
+          <p id="chart-error" role="status" aria-live="polite" hidden>
+            The spending chart is currently unavailable.
+          </p>
+        </div>
+      </section>
+
+      <!-- Monthly Summary -->
+      <section class="summary-section" aria-labelledby="summary-heading">
+        <h2 id="summary-heading">Monthly Summary</h2>
+
+        <div id="monthly-summary">
+          <p id="summary-empty-state">No expenses to summarize yet.</p>
+          <ul id="summary-list"></ul>
+          <p id="summary-total">Total: Rp0,00</p>
+        </div>
+      </section>
+
+      <!-- Transaction History -->
+      <section class="history-section" aria-labelledby="history-heading">
+        <h2 id="history-heading">Transaction History</h2>
+
+        <div class="history-controls">
+          <label for="sort-transactions">Sort by</label>
+          <select id="sort-transactions">
+            <option value="newest">Newest first</option>
+            <option value="amount">Amount (highest first)</option>
+            <option value="category">Category (A–Z)</option>
+          </select>
+        </div>
+
+        <p id="history-empty-state">
+          No transactions recorded for this month yet.
+        </p>
+
+        <ul id="transaction-list"></ul>
+      </section>
+
+      <!-- Custom Category Management -->
+      <section class="category-section" aria-labelledby="category-heading">
+        <h2 id="category-heading">Manage Categories</h2>
+
+        <form id="category-form">
+          <label for="new-category">New category</label>
+          <input
+            type="text"
+            id="new-category"
+            maxlength="50"
+            required
+            placeholder="Enter category name"
+          >
+
+          <p id="category-error" class="form-error" aria-live="polite"></p>
+
+          <button type="submit">Add Category</button>
+        </form>
+
+        <ul id="category-list"></ul>
+      </section>
+
+      <!-- Application Notifications -->
+      <div
+        id="app-notification"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+
+      <div
+        id="storage-warning"
+        role="alert"
+        hidden
+      >
+        Your data may not be saved because browser storage is unavailable.
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <p>Expense & Budget Tracker</p>
+    </footer>
+
+  </div>
+</body>
 </html>
