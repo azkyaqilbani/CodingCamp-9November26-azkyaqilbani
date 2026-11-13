@@ -29,6 +29,7 @@ import {
   setMonthlyBudget,
   calculateRemainingBudget,
   getMonthlyCategoryTotals,
+  createCategory,
 } from "./app.js";
 
 const validTransaction = {
@@ -645,5 +646,61 @@ describe("Monthly category totals", () => {
 
   test("returns an empty array when there are no transactions", () => {
     expect(getMonthlyCategoryTotals()).toEqual([]);
+  });
+});
+
+
+describe("Custom category creation", () => {
+  test("creates a valid custom category", () => {
+    const result = createCategory("Shopping");
+
+    expect(result.success).toBe(true);
+    expect(state.customCategories).toContain("Shopping");
+  });
+
+  test("trims whitespace from category names", () => {
+    const result = createCategory("  Shopping  ");
+
+    expect(result.success).toBe(true);
+    expect(state.customCategories).toContain("Shopping");
+  });
+
+  test("rejects an empty category name", () => {
+    const result = createCategory("   ");
+
+    expect(result.success).toBe(false);
+    expect(state.customCategories).toHaveLength(0);
+  });
+
+  test("rejects names longer than 50 characters", () => {
+    const result = createCategory("A".repeat(51));
+
+    expect(result.success).toBe(false);
+    expect(state.customCategories).toHaveLength(0);
+  });
+
+  test("rejects duplicate custom categories regardless of capitalization", () => {
+    createCategory("Shopping");
+    const result = createCategory("shopping");
+
+    expect(result.success).toBe(false);
+    expect(state.customCategories).toEqual(["Shopping"]);
+  });
+
+  test("rejects names matching default categories", () => {
+    const result = createCategory("food");
+
+    expect(result.success).toBe(false);
+    expect(state.customCategories).toHaveLength(0);
+  });
+
+  test("persists a valid custom category", () => {
+    createCategory("Shopping");
+
+    const storedData = JSON.parse(
+      localStorage.getItem(STORAGE_KEY)
+    );
+
+    expect(storedData.customCategories).toContain("Shopping");
   });
 });

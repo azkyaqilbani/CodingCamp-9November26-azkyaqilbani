@@ -89,6 +89,8 @@ function renderMonthlyView() {
   renderMonthlyOverview();
   renderBudgetOverview();
   renderSpendingChart();
+  renderCategoryList();
+  renderCategoryOptions();
 }
 
 function formatCurrency(amount) {
@@ -119,6 +121,115 @@ function getMonthKey(dateString) {
 function getAllCategories() {
   return [...DEFAULT_CATEGORIES, ...state.customCategories];
 }
+
+
+function createCategory(name) {
+  if (typeof name !== "string") {
+    return {
+      success: false,
+      message: "Please enter a valid category name."
+    };
+  }
+
+  const cleanName = name.trim();
+
+  if (cleanName.length < 1 || cleanName.length > 50) {
+    return {
+      success: false,
+      message: "Category name must contain 1–50 characters."
+    };
+  }
+
+  const alreadyExists = getAllCategories().some(
+    category => category.toLowerCase() === cleanName.toLowerCase()
+  );
+
+  if (alreadyExists) {
+    return {
+      success: false,
+      message: "This category already exists."
+    };
+  }
+
+  state.customCategories.push(cleanName);
+
+  const saved = saveData();
+
+  return {
+    success: true,
+    category: cleanName,
+    saved
+  };
+}
+
+
+function renderCategoryList() {
+  const categoryList = document.getElementById("category-list");
+
+  if (!categoryList) return;
+
+  categoryList.replaceChildren();
+
+  for (const category of getAllCategories()) {
+    const listItem = document.createElement("li");
+    listItem.textContent = category;
+    categoryList.appendChild(listItem);
+  }
+}
+
+
+function renderCategoryOptions() {
+  const categorySelect = document.getElementById("transaction-category");
+
+  if (!categorySelect) return;
+
+  const selectedCategory = categorySelect.value;
+  categorySelect.replaceChildren();
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select a category";
+  categorySelect.appendChild(placeholder);
+
+  for (const category of getAllCategories()) {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    categorySelect.appendChild(option);
+  }
+
+  if (getAllCategories().includes(selectedCategory)) {
+    categorySelect.value = selectedCategory;
+  }
+}
+
+
+function handleCategorySubmit(event) {
+  event.preventDefault();
+
+  const categoryInput = document.getElementById("new-category");
+  const categoryError = document.getElementById("category-error");
+
+  const result = createCategory(categoryInput.value);
+
+  if (!result.success) {
+    categoryError.textContent = result.message;
+    return;
+  }
+
+  categoryError.textContent = "";
+
+  if (!result.saved) {
+    categoryError.textContent =
+      "Category added for this session, but could not be saved permanently.";
+  }
+
+  categoryInput.value = "";
+
+  renderCategoryList();
+  renderCategoryOptions();
+}
+
 
 function showTransactionError(message) {
   const errorElement = document.getElementById("transaction-error");
@@ -551,6 +662,12 @@ function initializeApp() {
 
   if (cancelBudgetButton) {
   cancelBudgetButton.addEventListener("click", cancelBudgetForm);
+}
+
+  const categoryForm = document.getElementById("category-form");
+
+  if (categoryForm) {
+  categoryForm.addEventListener("submit", handleCategorySubmit);
 }
 
   const transactionForm =
@@ -1008,4 +1125,8 @@ export {
   cancelBudgetForm,
   getMonthlyCategoryTotals,
   renderSpendingChart,
+  createCategory,
+  renderCategoryList,
+  renderCategoryOptions,
+  handleCategorySubmit,
 };
