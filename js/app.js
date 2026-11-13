@@ -50,6 +50,45 @@ function formatMonthLabel(monthKey) {
   }).format(date);
 }
 
+function getAdjacentMonthKey(monthKey, offset) {
+  const [year, month] = monthKey.split("-").map(Number);
+  const date = new Date(year, month - 1 + offset, 1);
+
+  const newYear = date.getFullYear();
+  const newMonth = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${newYear}-${newMonth}`;
+}
+
+function changeSelectedMonth(offset) {
+  state.selectedMonth = getAdjacentMonthKey(
+    state.selectedMonth,
+    offset
+  );
+
+  renderMonthlyView();
+}
+
+function goToCurrentMonth() {
+  state.selectedMonth = getCurrentMonthKey();
+
+  renderMonthlyView();
+}
+
+function renderMonthlyView() {
+  const selectedMonthElement =
+    document.getElementById("selected-month");
+
+  if (selectedMonthElement) {
+    selectedMonthElement.textContent = formatMonthLabel(
+      state.selectedMonth
+    );
+  }
+
+  renderTransactionHistory();
+  renderMonthlyOverview();
+}
+
 function formatCurrency(amount) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -149,8 +188,7 @@ function handleTransactionSubmit(event) {
   form.reset();
   setDefaultTransactionDate();
   showTransactionError("");
-  renderTransactionHistory();
-  renderMonthlyOverview();
+  renderMonthlyView();
 
   if (!result.saved) {
     showTransactionError(
@@ -455,6 +493,34 @@ function saveData() {
 function initializeApp() {
   loadData();
 
+  const previousMonthButton =
+    document.getElementById("prev-month");
+
+  if (previousMonthButton) {
+    previousMonthButton.addEventListener("click", () => {
+      changeSelectedMonth(-1);
+    });
+  }
+
+  const nextMonthButton =
+    document.getElementById("next-month");
+
+  if (nextMonthButton) {
+    nextMonthButton.addEventListener("click", () => {
+      changeSelectedMonth(1);
+    });
+  }
+
+  const currentMonthButton =
+    document.getElementById("current-month");
+
+  if (currentMonthButton) {
+    currentMonthButton.addEventListener(
+      "click",
+      goToCurrentMonth
+    );
+  }
+
   const selectedMonthElement =
     document.getElementById("selected-month");
 
@@ -496,8 +562,7 @@ function initializeApp() {
     );
   }
 
-  renderTransactionHistory();
-  renderMonthlyOverview();
+  renderMonthlyView();
 
   console.log("Expense & Budget Tracker initialized.");
 }
@@ -619,8 +684,7 @@ function handleHistoryClick(event) {
   const result = deleteTransaction(transactionId);
 
   if (result.success) {
-    renderTransactionHistory();
-    renderMonthlyOverview();
+    renderMonthlyView();
   }
 }
 
@@ -671,4 +735,8 @@ export {
   handleSortChange,
   calculateMonthlyExpenses,
   renderMonthlyOverview,
+  changeSelectedMonth,
+  goToCurrentMonth,
+  renderMonthlyView,
+  getAdjacentMonthKey,
 };

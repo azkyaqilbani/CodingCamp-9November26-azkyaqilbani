@@ -24,6 +24,7 @@ import {
   deleteTransaction,
   calculateMonthlyExpenses,
   renderMonthlyOverview,
+  getAdjacentMonthKey,
 } from "./app.js";
 
 const validTransaction = {
@@ -507,5 +508,20 @@ describe("Transaction history", () => {
     expect(calculateMonthlyExpenses()).toBe(0);
   });
 });
+
+describe("Month navigation date utility", () => {
+  test("moves to the previous month", () => {
+    expect(getAdjacentMonthKey("2026-11", -1)).toBe("2026-10");
+  });
+
+  test("moves to the next month across a year boundary", () => {
+    expect(getAdjacentMonthKey("2026-12", 1)).toBe("2027-01");
+  });
+
+  test("moves to the previous year when going back from January", () => {
+    expect(getAdjacentMonthKey("2027-01", -1)).toBe("2026-12");
+  });
+});
+
 });
 
