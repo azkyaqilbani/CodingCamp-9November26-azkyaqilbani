@@ -22,6 +22,8 @@ import {
   getMonthlyTransactions,
   sortTransactions,
   deleteTransaction,
+  calculateMonthlyExpenses,
+  renderMonthlyOverview,
 } from "./app.js";
 
 const validTransaction = {
@@ -445,5 +447,65 @@ describe("Transaction history", () => {
     expect(result.success).toBe(false);
     expect(state.transactions).toHaveLength(3);
   });
+
+  describe("Monthly expense calculation", () => {
+  test("calculates total expenses for the selected month", () => {
+    state.selectedMonth = "2026-11";
+
+    state.transactions = [
+      {
+        id: "1",
+        item: "Lunch",
+        amount: 25000,
+        category: "Food",
+        date: "2026-11-10",
+        createdAt: 1000
+      },
+      {
+        id: "2",
+        item: "Transport",
+        amount: 15000,
+        category: "Transport",
+        date: "2026-11-12",
+        createdAt: 2000
+      }
+    ];
+
+    expect(calculateMonthlyExpenses()).toBe(40000);
+  });
+
+  test("excludes transactions from other months", () => {
+    state.selectedMonth = "2026-11";
+
+    state.transactions = [
+      {
+        id: "1",
+        item: "Lunch",
+        amount: 25000,
+        category: "Food",
+        date: "2026-11-10",
+        createdAt: 1000
+      },
+      {
+        id: "2",
+        item: "Dinner",
+        amount: 30000,
+        category: "Food",
+        date: "2026-12-01",
+        createdAt: 2000
+      }
+    ];
+
+    expect(calculateMonthlyExpenses()).toBe(25000);
+  });
+
+  test("returns zero when there are no transactions in the selected month", () => {
+    state.selectedMonth = "2026-11";
+
+    state.transactions = [];
+
+    expect(calculateMonthlyExpenses()).toBe(0);
+  });
+});
 });
 

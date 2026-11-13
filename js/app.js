@@ -150,6 +150,7 @@ function handleTransactionSubmit(event) {
   setDefaultTransactionDate();
   showTransactionError("");
   renderTransactionHistory();
+  renderMonthlyOverview();
 
   if (!result.saved) {
     showTransactionError(
@@ -496,6 +497,7 @@ function initializeApp() {
   }
 
   renderTransactionHistory();
+  renderMonthlyOverview();
 
   console.log("Expense & Budget Tracker initialized.");
 }
@@ -504,6 +506,23 @@ function getMonthlyTransactions() {
   return state.transactions.filter(
     transaction => getMonthKey(transaction.date) === state.selectedMonth
   );
+}
+
+function calculateMonthlyExpenses() {
+  return getMonthlyTransactions().reduce(
+    (total, transaction) => total + transaction.amount,
+    0
+  );
+}
+
+function renderMonthlyOverview() {
+  const monthlyExpensesElement =
+    document.getElementById("monthly-expenses");
+
+  if (!monthlyExpensesElement) return;
+
+  monthlyExpensesElement.textContent =
+    formatCurrency(calculateMonthlyExpenses());
 }
 
 function sortTransactions(transactions) {
@@ -601,6 +620,7 @@ function handleHistoryClick(event) {
 
   if (result.success) {
     renderTransactionHistory();
+    renderMonthlyOverview();
   }
 }
 
@@ -649,4 +669,6 @@ export {
   deleteTransaction,
   handleHistoryClick,
   handleSortChange,
+  calculateMonthlyExpenses,
+  renderMonthlyOverview,
 };
