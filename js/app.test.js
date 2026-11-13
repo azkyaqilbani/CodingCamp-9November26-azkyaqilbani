@@ -16,7 +16,12 @@ import {
   validateTransactions,
   validateBudgets,
   loadData,
-  saveData
+  saveData,
+  getAllCategories,
+  createTransaction,
+  getMonthlyTransactions,
+  sortTransactions,
+  deleteTransaction,
 } from "./app.js";
 
 const validTransaction = {
@@ -219,3 +224,226 @@ describe("LocalStorage", () => {
     expect(globalThis.localStorage.setItem).not.toHaveBeenCalled();
   });
 });
+
+
+describe("Transaction creation", () => {
+  test("creates and saves a valid transaction", () => {
+    const result = createTransaction({
+      item: "  Lunch at cafe  ",
+      amount: "25000",
+      category: "Food",
+      date: "2026-11-13"
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.saved).toBe(true);
+    expect(result.transaction.item).toBe("Lunch at cafe");
+    expect(result.transaction.amount).toBe(25000);
+    expect(state.transactions).toHaveLength(1);
+
+    const saved = JSON.parse(
+      globalThis.localStorage.getStoredValue()
+    );
+
+    expect(saved.transactions).toHaveLength(1);
+  });
+
+  test("rejects an empty item name", () => {
+    const result = createTransaction({
+      item: "   ",
+      amount: 25000,
+      category: "Food",
+      date: "2026-11-13"
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.transactions).toHaveLength(0);
+  });
+
+  test("rejects an invalid amount", () => {
+    for (const amount of [0, -100, "invalid", Infinity]) {
+      const result = createTransaction({
+        item: "Lunch",
+        amount,
+        category: "Food",
+        date: "2026-11-13"
+      });
+
+      expect(result.success).toBe(false);
+    }
+
+    expect(state.transactions).toHaveLength(0);
+  });
+
+  test("rejects an unknown category", () => {
+    const result = createTransaction({
+      item: "Lunch",
+      amount: 25000,
+      category: "Unknown",
+      date: "2026-11-13"
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.transactions).toHaveLength(0);
+  });
+
+  test("accepts a custom category", () => {
+    state.customCategories = ["Shopping"];
+
+    const result = createTransaction({
+      item: "New notebook",
+      amount: 30000,
+      category: "Shopping",
+      date: "2026-11-13"
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.transactions).toHaveLength(1);
+  });
+
+  test("rejects an invalid date", () => {
+    const result = createTransaction({
+      item: "Lunch",
+      amount: 25000,
+      category: "Food",
+      date: "2026-02-30"
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.transactions).toHaveLength(0);
+  });
+
+  test("returns a warning when saving fails", () => {
+  globalThis.localStorage.setItem = vi.fn(() => {
+    throw new Error("Storage unavailable");
+  });
+
+  const result = createTransaction({
+    item: "Lunch",
+    amount: 25000,
+    category: "Food",
+    date: "2026-11-13"
+  });
+
+  expect(result.success).toBe(true);
+  expect(result.saved).toBe(false);
+  expect(state.transactions).toHaveLength(1);
+  });
+});
+
+
+describe("Transaction history", () => {
+  const olderTransaction = {
+    id: "tx-older",
+    item: "Bus fare",
+    amount: 10000,
+    category: "Transport",
+    date: "2026-11-10",
+    createdAt: 1000
+  };
+
+  const newerTransaction = {
+    id: "tx-newer",
+    item: "Lunch",
+    amount: 25000,
+    category: "Food",
+    date: "2026-11-13",
+    createdAt: 2000
+  };
+
+  const otherMonthTransaction = {
+    id: "tx-december",
+    item: "Movie",
+    amount: 50000,
+    category: "Fun",
+    date: "2026-12-01",
+    createdAt: 3000
+  };
+
+  beforeEach(() => {
+    state.selectedMonth = "2026-11";
+    state.sortKey = null;
+    state.transactions = [
+      olderTransaction,
+      newerTransaction,
+      otherMonthTransaction
+    ];
+  });
+
+  test("shows only transactions from the selected month", () => {
+    expect(getMonthlyTransactions()).toEqual([
+      olderTransaction,
+      newerTransaction
+    ]);
+  });
+
+  test("sorts transactions newest first by default", () => {
+    const result = sortTransactions([
+      olderTransaction,
+      newerTransaction
+    ]);
+
+    expect(result.map(transaction => transaction.id)).toEqual([
+      "tx-newer",
+      "tx-older"
+    ]);
+  });
+
+  test("sorts transactions by amount from highest to lowest", () => {
+    state.sortKey = "amount";
+
+    const result = sortTransactions([
+      olderTransaction,
+      newerTransaction
+    ]);
+
+    expect(result.map(transaction => transaction.id)).toEqual([
+      "tx-newer",
+      "tx-older"
+    ]);
+  });
+
+  test("sorts transactions by category alphabetically", () => {
+    state.sortKey = "category";
+
+    const result = sortTransactions([
+      olderTransaction,
+      newerTransaction
+    ]);
+
+    expect(result.map(transaction => transaction.category)).toEqual([
+      "Food",
+      "Transport"
+    ]);
+  });
+
+  test("uses newer dates first when amounts are equal", () => {
+    state.sortKey = "amount";
+
+    const result = sortTransactions([
+      olderTransaction,
+      { ...newerTransaction, amount: olderTransaction.amount }
+    ]);
+
+    expect(result[0].id).toBe("tx-newer");
+  });
+
+  test("deletes a transaction and saves the updated data", () => {
+    const result = deleteTransaction("tx-older");
+
+    expect(result.success).toBe(true);
+    expect(result.saved).toBe(true);
+    expect(state.transactions.map(transaction => transaction.id)).toEqual([
+      "tx-newer",
+      "tx-december"
+    ]);
+  });
+
+  test("returns failure when the transaction does not exist", () => {
+    const result = deleteTransaction("missing-id");
+
+    expect(result.success).toBe(false);
+    expect(state.transactions).toHaveLength(3);
+  });
+});
+

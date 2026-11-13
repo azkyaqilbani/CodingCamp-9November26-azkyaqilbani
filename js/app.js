@@ -75,6 +75,103 @@ function getMonthKey(dateString) {
 }
 
 
+function getAllCategories() {
+  return [...DEFAULT_CATEGORIES, ...state.customCategories];
+}
+
+function showTransactionError(message) {
+  const errorElement = document.getElementById("transaction-error");
+
+  if (errorElement) {
+    errorElement.textContent = message;
+  }
+}
+
+function createTransaction({ item, amount, category, date }) {
+  const cleanItem = item.trim();
+  const numericAmount = Number(amount);
+  const availableCategories = getAllCategories();
+
+  if (!cleanItem || cleanItem.length > 100) {
+    return { success: false, message: "Please enter an item name (maximum 100 characters)." };
+  }
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    return { success: false, message: "Please enter a valid amount greater than zero." };
+  }
+
+  if (!availableCategories.includes(category)) {
+    return { success: false, message: "Please select a valid category." };
+  }
+
+  if (!isValidDate(date)) {
+    return { success: false, message: "Please enter a valid transaction date." };
+  }
+
+  const transaction = {
+    id: crypto.randomUUID(),
+    item: cleanItem,
+    amount: numericAmount,
+    category,
+    date,
+    createdAt: Date.now()
+  };
+
+  state.transactions.push(transaction);
+
+  const saved = saveData();
+
+  return {
+    success: true,
+    transaction,
+    saved
+  };
+}
+
+function handleTransactionSubmit(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+
+  const result = createTransaction({
+    item: formData.get("item") || "",
+    amount: formData.get("amount"),
+    category: formData.get("category") || "",
+    date: formData.get("date") || ""
+  });
+
+  if (!result.success) {
+    showTransactionError(result.message);
+    return;
+  }
+
+  form.reset();
+  setDefaultTransactionDate();
+  showTransactionError("");
+  renderTransactionHistory();
+
+  if (!result.saved) {
+    showTransactionError(
+      "Expense added for this session, but could not be saved permanently."
+    );
+  }
+}
+
+function setDefaultTransactionDate() {
+  const dateInput = document.getElementById("transaction-date");
+
+  if (dateInput) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    dateInput.value = `${year}-${month}-${day}`;
+  }
+}
+
+
 /* ========================================
    4. Data Validation
 ======================================== */
@@ -353,6 +450,7 @@ function saveData() {
    5. Application Initialization
 ======================================== */
 
+
 function initializeApp() {
   loadData();
 
@@ -365,8 +463,152 @@ function initializeApp() {
     );
   }
 
+  const transactionForm =
+    document.getElementById("transaction-form");
+
+  if (transactionForm) {
+    transactionForm.addEventListener(
+      "submit",
+      handleTransactionSubmit
+    );
+  }
+
+  setDefaultTransactionDate();
+
+  const transactionList =
+    document.getElementById("transaction-list");
+
+  if (transactionList) {
+    transactionList.addEventListener(
+      "click",
+      handleHistoryClick
+    );
+  }
+
+  const sortSelect =
+    document.getElementById("sort-transactions");
+
+  if (sortSelect) {
+    sortSelect.addEventListener(
+      "change",
+      handleSortChange
+    );
+  }
+
+  renderTransactionHistory();
+
   console.log("Expense & Budget Tracker initialized.");
 }
+  
+function getMonthlyTransactions() {
+  return state.transactions.filter(
+    transaction => getMonthKey(transaction.date) === state.selectedMonth
+  );
+}
+
+function sortTransactions(transactions) {
+  const sorted = [...transactions];
+  const sortKey = state.sortKey || "newest";
+
+  sorted.sort((a, b) => {
+    if (sortKey === "amount") {
+      return (
+        b.amount - a.amount ||
+        b.date.localeCompare(a.date) ||
+        b.createdAt - a.createdAt
+      );
+    }
+
+    if (sortKey === "category") {
+      return (
+        a.category.localeCompare(b.category) ||
+        b.date.localeCompare(a.date) ||
+        b.createdAt - a.createdAt
+      );
+    }
+
+    return (
+      b.createdAt - a.createdAt ||
+      b.date.localeCompare(a.date)
+    );
+  });
+
+  return sorted;
+}
+
+function renderTransactionHistory() {
+  const transactionList = document.getElementById("transaction-list");
+  const emptyState = document.getElementById("history-empty-state");
+
+  if (!transactionList || !emptyState) return;
+
+  const transactions = sortTransactions(getMonthlyTransactions());
+
+  transactionList.replaceChildren();
+  emptyState.hidden = transactions.length > 0;
+
+  transactions.forEach(transaction => {
+    const listItem = document.createElement("li");
+    listItem.className = "transaction-item";
+
+    const details = document.createElement("span");
+    details.className = "transaction-details";
+    details.textContent =
+      `${transaction.item} · ${transaction.category} · ${formatDate(transaction.date)}`;
+
+    const amount = document.createElement("span");
+    amount.className = "transaction-amount";
+    amount.textContent = formatCurrency(transaction.amount);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "delete-transaction";
+    deleteButton.textContent = "Delete";
+    deleteButton.setAttribute(
+      "aria-label",
+      `Delete ${transaction.item}`
+    );
+    deleteButton.dataset.transactionId = transaction.id;
+
+    listItem.append(details, amount, deleteButton);
+    transactionList.appendChild(listItem);
+  });
+}
+
+function deleteTransaction(transactionId) {
+  const originalLength = state.transactions.length;
+
+  state.transactions = state.transactions.filter(
+    transaction => transaction.id !== transactionId
+  );
+
+  if (state.transactions.length === originalLength) {
+    return { success: false, saved: false };
+  }
+
+  const saved = saveData();
+
+  return { success: true, saved };
+}
+
+function handleHistoryClick(event) {
+  const deleteButton = event.target.closest("[data-transaction-id]");
+
+  if (!deleteButton) return;
+
+  const transactionId = deleteButton.dataset.transactionId;
+  const result = deleteTransaction(transactionId);
+
+  if (result.success) {
+    renderTransactionHistory();
+  }
+}
+
+function handleSortChange(event) {
+  state.sortKey = event.target.value;
+  renderTransactionHistory();
+}
+
 
 /* ========================================
    6. Start Application
@@ -397,4 +639,14 @@ export {
   formatCurrency,
   formatDate,
   getMonthKey,
+  getAllCategories,
+  createTransaction,
+  handleTransactionSubmit,
+  setDefaultTransactionDate,
+  getMonthlyTransactions,
+  sortTransactions,
+  renderTransactionHistory,
+  deleteTransaction,
+  handleHistoryClick,
+  handleSortChange,
 };
