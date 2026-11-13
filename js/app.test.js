@@ -30,6 +30,7 @@ import {
   calculateRemainingBudget,
   getMonthlyCategoryTotals,
   createCategory,
+  renderMonthlySummary,
 } from "./app.js";
 
 const validTransaction = {
@@ -232,6 +233,42 @@ describe("LocalStorage", () => {
     expect(globalThis.localStorage.setItem).not.toHaveBeenCalled();
   });
 });
+
+
+function makeElement() {
+  return {
+    textContent: "",
+    hidden: false,
+    children: [],
+    replaceChildren() {
+      this.children = [];
+    },
+    append(...elements) {
+      this.children.push(...elements);
+    },
+    appendChild(element) {
+      this.children.push(element);
+    }
+  };
+}
+
+function makeSummaryDocument() {
+  const elements = {
+    "summary-list": makeElement(),
+    "summary-empty-state": makeElement(),
+    "summary-total": makeElement()
+  };
+
+  return {
+    getElementById(id) {
+      return elements[id] || null;
+    },
+    createElement() {
+      return makeElement();
+    },
+    elements
+  };
+}
 
 
 describe("Transaction creation", () => {
@@ -702,5 +739,97 @@ describe("Custom category creation", () => {
     );
 
     expect(storedData.customCategories).toContain("Shopping");
+  });
+});
+
+
+describe("Monthly summary rendering", () => {
+  let originalDocument;
+
+  beforeEach(() => {
+    originalDocument = globalThis.document;
+    globalThis.document = makeSummaryDocument();
+  });
+
+  afterEach(() => {
+    if (originalDocument === undefined) {
+      delete globalThis.document;
+    } else {
+      globalThis.document = originalDocument;
+    }
+  });
+
+  test("shows the empty state when there are no transactions", () => {
+    state.transactions = [];
+
+    renderMonthlySummary();
+
+    const { elements } = document;
+
+    expect(elements["summary-empty-state"].hidden).toBe(false);
+    expect(elements["summary-list"].children).toHaveLength(0);
+    expect(
+      elements["summary-total"].textContent
+    ).toBe(`Total: ${formatCurrency(0)}`);
+  });
+
+  test("renders category totals and grand total", () => {
+    state.selectedMonth = "2026-11";
+    state.transactions = [
+      {
+        id: "1",
+        item: "Lunch",
+        amount: 50000,
+        category: "Food",
+        date: "2026-11-10",
+        createdAt: 1
+      },
+      {
+        id: "2",
+        item: "Bus",
+        amount: 20000,
+        category: "Transport",
+        date: "2026-11-11",
+        createdAt: 2
+      }
+    ];
+
+    renderMonthlySummary();
+
+    const { elements } = document;
+    const rows = elements["summary-list"].children;
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0].children[0].textContent).toBe("Food");
+    expect(rows[0].children[1].textContent).toBe(formatCurrency(50000));
+    expect(rows[1].children[0].textContent).toBe("Transport");
+    expect(rows[1].children[1].textContent).toBe(formatCurrency(20000));
+    expect(elements["summary-empty-state"].hidden).toBe(true);
+    expect(
+      elements["summary-total"].textContent
+    ).toBe(`Total: ${formatCurrency(70000)}`);
+  });
+
+  test("excludes transactions from other months", () => {
+    state.selectedMonth = "2026-11";
+    state.transactions = [
+      {
+        id: "1",
+        item: "Lunch",
+        amount: 50000,
+        category: "Food",
+        date: "2026-10-10",
+        createdAt: 1
+      }
+    ];
+
+    renderMonthlySummary();
+
+    const { elements } = document;
+
+    expect(elements["summary-empty-state"].hidden).toBe(false);
+    expect(
+      elements["summary-total"].textContent
+    ).toBe(`Total: ${formatCurrency(0)}`);
   });
 });

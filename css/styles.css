@@ -422,3 +422,11 @@ form button:active,
     grid-column: 1;
   }
 }
+
+#summary-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}

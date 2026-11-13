@@ -91,6 +91,7 @@ function renderMonthlyView() {
   renderSpendingChart();
   renderCategoryList();
   renderCategoryOptions();
+  renderMonthlySummary();
 }
 
 function formatCurrency(amount) {
@@ -781,6 +782,41 @@ function renderMonthlyOverview() {
 }
 
 
+function renderMonthlySummary() {
+  const summaryList = document.getElementById("summary-list");
+  const emptyState = document.getElementById("summary-empty-state");
+  const summaryTotal = document.getElementById("summary-total");
+
+  if (!summaryList || !emptyState || !summaryTotal) return;
+
+  const categoryTotals = getMonthlyCategoryTotals();
+
+  summaryList.replaceChildren();
+
+  if (categoryTotals.length === 0) {
+    emptyState.hidden = false;
+  } else {
+    emptyState.hidden = true;
+
+    for (const item of categoryTotals) {
+      const listItem = document.createElement("li");
+
+      const categoryName = document.createElement("span");
+      categoryName.textContent = item.category;
+
+      const categoryAmount = document.createElement("span");
+      categoryAmount.textContent = formatCurrency(item.total);
+
+      listItem.append(categoryName, categoryAmount);
+      summaryList.appendChild(listItem);
+    }
+  }
+
+  summaryTotal.textContent =
+    `Total: ${formatCurrency(calculateMonthlyExpenses())}`;
+}
+
+
 function renderSpendingChart() {
   const canvas = document.getElementById("spending-chart");
   const emptyState = document.getElementById("chart-empty-state");
@@ -1129,4 +1165,5 @@ export {
   renderCategoryList,
   renderCategoryOptions,
   handleCategorySubmit,
+  renderMonthlySummary,
 };
