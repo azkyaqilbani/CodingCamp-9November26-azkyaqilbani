@@ -25,6 +25,10 @@ import {
   calculateMonthlyExpenses,
   renderMonthlyOverview,
   getAdjacentMonthKey,
+  getMonthlyBudget,
+  setMonthlyBudget,
+  calculateRemainingBudget,
+  getMonthlyCategoryTotals,
 } from "./app.js";
 
 const validTransaction = {
@@ -523,5 +527,123 @@ describe("Month navigation date utility", () => {
   });
 });
 
+describe("Monthly budget logic", () => {
+  test("returns null when no budget exists", () => {
+    state.selectedMonth = "2026-11";
+
+    expect(getMonthlyBudget()).toBeNull();
+    expect(calculateRemainingBudget()).toBeNull();
+  });
+
+  test("sets a budget for the selected month", () => {
+    state.selectedMonth = "2026-11";
+
+    const result = setMonthlyBudget(2000000);
+
+    expect(result.success).toBe(true);
+    expect(getMonthlyBudget()).toBe(2000000);
+  });
+
+  test("updates an existing monthly budget", () => {
+    state.selectedMonth = "2026-11";
+
+    setMonthlyBudget(2000000);
+    setMonthlyBudget(2500000);
+
+    expect(getMonthlyBudget()).toBe(2500000);
+  });
+
+  test("keeps budgets for different months separate", () => {
+    state.selectedMonth = "2026-11";
+    setMonthlyBudget(2000000);
+
+    state.selectedMonth = "2026-12";
+    setMonthlyBudget(3000000);
+
+    expect(state.budgets["2026-11"]).toBe(2000000);
+    expect(state.budgets["2026-12"]).toBe(3000000);
+  });
+
+  test("rejects zero and negative budgets", () => {
+    expect(setMonthlyBudget(0).success).toBe(false);
+    expect(setMonthlyBudget(-1000).success).toBe(false);
+  });
+
+  test("calculates the remaining budget correctly", () => {
+    state.selectedMonth = "2026-11";
+    setMonthlyBudget(2000000);
+
+    state.transactions = [
+      {
+        id: "1",
+        item: "Lunch",
+        amount: 250000,
+        category: "Food",
+        date: "2026-11-10",
+        createdAt: 1000
+      }
+    ];
+
+    expect(calculateRemainingBudget()).toBe(1750000);
+  });
+});
 });
 
+describe("Monthly category totals", () => {
+  test("calculates totals for each category", () => {
+    state.transactions = [
+      {
+        id: "1",
+        item: "Lunch",
+        amount: 50000,
+        category: "Food",
+        date: "2026-11-10",
+        createdAt: 1
+      },
+      {
+        id: "2",
+        item: "Dinner",
+        amount: 75000,
+        category: "Food",
+        date: "2026-11-11",
+        createdAt: 2
+      },
+      {
+        id: "3",
+        item: "Bus",
+        amount: 20000,
+        category: "Transport",
+        date: "2026-11-12",
+        createdAt: 3
+      }
+    ];
+
+    state.selectedMonth = "2026-11";
+
+    expect(getMonthlyCategoryTotals()).toEqual([
+      { category: "Food", total: 125000 },
+      { category: "Transport", total: 20000 }
+    ]);
+  });
+
+  test("excludes transactions from other months", () => {
+    state.transactions = [
+      {
+        id: "1",
+        item: "Lunch",
+        amount: 50000,
+        category: "Food",
+        date: "2026-10-10",
+        createdAt: 1
+      }
+    ];
+
+    state.selectedMonth = "2026-11";
+
+    expect(getMonthlyCategoryTotals()).toEqual([]);
+  });
+
+  test("returns an empty array when there are no transactions", () => {
+    expect(getMonthlyCategoryTotals()).toEqual([]);
+  });
+});

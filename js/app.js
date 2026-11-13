@@ -87,6 +87,8 @@ function renderMonthlyView() {
 
   renderTransactionHistory();
   renderMonthlyOverview();
+  renderBudgetOverview();
+  renderSpendingChart();
 }
 
 function formatCurrency(amount) {
@@ -530,6 +532,27 @@ function initializeApp() {
     );
   }
 
+  const openBudgetButton =
+  document.getElementById("open-budget-form");
+
+  if (openBudgetButton) {
+  openBudgetButton.addEventListener("click", openBudgetForm);
+}
+
+  const budgetForm =
+  document.getElementById("budget-form");
+
+  if (budgetForm) {
+  budgetForm.addEventListener("submit", handleBudgetSubmit);
+}
+
+  const cancelBudgetButton =
+  document.getElementById("cancel-budget-form");
+
+  if (cancelBudgetButton) {
+  cancelBudgetButton.addEventListener("click", cancelBudgetForm);
+}
+
   const transactionForm =
     document.getElementById("transaction-form");
 
@@ -580,6 +603,56 @@ function calculateMonthlyExpenses() {
   );
 }
 
+
+function getMonthlyCategoryTotals() {
+  const totals = {};
+
+  for (const transaction of getMonthlyTransactions()) {
+    const category = transaction.category;
+    totals[category] = (totals[category] || 0) + transaction.amount;
+  }
+
+  return Object.entries(totals)
+    .map(([category, total]) => ({ category, total }))
+    .sort((a, b) => a.category.localeCompare(b.category));
+}
+
+
+function getMonthlyBudget() {
+  return state.budgets[state.selectedMonth] ?? null;
+}
+
+function setMonthlyBudget(amount) {
+  const numericAmount = Number(amount);
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    return {
+      success: false,
+      message: "Please enter a valid budget greater than zero."
+    };
+  }
+
+  state.budgets[state.selectedMonth] = numericAmount;
+
+  const saved = saveData();
+
+  return {
+    success: true,
+    budget: numericAmount,
+    saved
+  };
+}
+
+function calculateRemainingBudget() {
+  const budget = getMonthlyBudget();
+
+  if (budget === null) {
+    return null;
+  }
+
+  return budget - calculateMonthlyExpenses();
+}
+
 function renderMonthlyOverview() {
   const monthlyExpensesElement =
     document.getElementById("monthly-expenses");
@@ -588,6 +661,193 @@ function renderMonthlyOverview() {
 
   monthlyExpensesElement.textContent =
     formatCurrency(calculateMonthlyExpenses());
+}
+
+
+function renderSpendingChart() {
+  const canvas = document.getElementById("spending-chart");
+  const emptyState = document.getElementById("chart-empty-state");
+  const errorMessage = document.getElementById("chart-error");
+
+  if (!canvas || !emptyState || !errorMessage) return;
+
+  const categoryTotals = getMonthlyCategoryTotals();
+
+  // Show the empty state when there are no expenses.
+  if (categoryTotals.length === 0) {
+    if (spendingChart) {
+      spendingChart.destroy();
+      spendingChart = null;
+    }
+
+    emptyState.hidden = false;
+    errorMessage.hidden = true;
+    return;
+  }
+
+  // Handle Chart.js CDN loading failure.
+  if (typeof Chart === "undefined") {
+    emptyState.hidden = true;
+    errorMessage.hidden = false;
+    return;
+  }
+
+  emptyState.hidden = true;
+  errorMessage.hidden = true;
+
+  const labels = categoryTotals.map(item => item.category);
+  const amounts = categoryTotals.map(item => item.total);
+
+  const chartData = {
+    labels,
+    datasets: [{
+      data: amounts,
+      backgroundColor: [
+        "#F4B942",
+        "#E76F51",
+        "#457B9D",
+        "#8AB17D",
+        "#B089C6",
+        "#E9C46A",
+        "#6D8299"
+      ],
+      borderWidth: 2,
+      borderColor: "#FFFFFF"
+    }]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        position: "bottom"
+      },
+      tooltip: {
+        callbacks: {
+          label(context) {
+            return `${context.label}: ${formatCurrency(context.parsed)}`;
+          }
+        }
+      }
+    }
+  };
+
+  if (spendingChart) {
+    spendingChart.data = chartData;
+    spendingChart.update();
+  } else {
+    spendingChart = new Chart(canvas, {
+      type: "pie",
+      data: chartData,
+      options: chartOptions
+    });
+  }
+}
+
+let spendingChart = null;
+
+function renderBudgetOverview() {
+  const budgetAmountElement =
+    document.getElementById("budget-amount");
+
+  const remainingBudgetElement =
+    document.getElementById("remaining-budget");
+
+  const budgetStatusElement =
+    document.getElementById("budget-status");
+
+  const openBudgetFormButton =
+    document.getElementById("open-budget-form");
+
+  if (
+    !budgetAmountElement ||
+    !remainingBudgetElement ||
+    !budgetStatusElement
+  ) return;
+
+  const budget = getMonthlyBudget();
+
+  if (budget === null) {
+    budgetAmountElement.textContent = "No budget set";
+    remainingBudgetElement.textContent = "—";
+    budgetStatusElement.textContent =
+      "Set a budget to start monitoring your spending.";
+
+    if (openBudgetFormButton) {
+      openBudgetFormButton.textContent = "Set Budget";
+    }
+
+    return;
+  }
+
+  const remaining = calculateRemainingBudget();
+
+  budgetAmountElement.textContent = formatCurrency(budget);
+  remainingBudgetElement.textContent = formatCurrency(remaining);
+
+  if (remaining > 0) {
+    budgetStatusElement.textContent = "You are within your budget.";
+  } else if (remaining === 0) {
+    budgetStatusElement.textContent = "You have reached your budget limit.";
+  } else {
+    budgetStatusElement.textContent = "You are over your budget.";
+  }
+
+  if (openBudgetFormButton) {
+    openBudgetFormButton.textContent = "Edit Budget";
+  }
+}
+
+function openBudgetForm() {
+  const budgetForm = document.getElementById("budget-form");
+  const budgetInput = document.getElementById("budget-input");
+  const budgetError = document.getElementById("budget-error");
+
+  if (!budgetForm || !budgetInput) return;
+
+  const currentBudget = getMonthlyBudget();
+
+  budgetInput.value = currentBudget ?? "";
+  budgetError.textContent = "";
+  budgetForm.hidden = false;
+  budgetInput.focus();
+}
+
+function handleBudgetSubmit(event) {
+  event.preventDefault();
+
+  const budgetInput = document.getElementById("budget-input");
+  const budgetError = document.getElementById("budget-error");
+
+  const result = setMonthlyBudget(budgetInput.value);
+
+  if (!result.success) {
+    budgetError.textContent = result.message;
+    return;
+  }
+
+  budgetError.textContent = "";
+
+  if (!result.saved) {
+    budgetError.textContent =
+      "Budget updated for this session, but could not be saved permanently.";
+  }
+
+  document.getElementById("budget-form").hidden = true;
+  budgetInput.value = "";
+
+  renderMonthlyView();
+}
+
+function cancelBudgetForm() {
+  const budgetForm = document.getElementById("budget-form");
+  const budgetInput = document.getElementById("budget-input");
+  const budgetError = document.getElementById("budget-error");
+
+  if (budgetForm) budgetForm.hidden = true;
+  if (budgetInput) budgetInput.value = "";
+  if (budgetError) budgetError.textContent = "";
 }
 
 function sortTransactions(transactions) {
@@ -739,4 +999,13 @@ export {
   goToCurrentMonth,
   renderMonthlyView,
   getAdjacentMonthKey,
+  getMonthlyBudget,
+  setMonthlyBudget,
+  calculateRemainingBudget,
+  renderBudgetOverview,
+  openBudgetForm,
+  handleBudgetSubmit,
+  cancelBudgetForm,
+  getMonthlyCategoryTotals,
+  renderSpendingChart,
 };
