@@ -241,6 +241,13 @@ function showTransactionError(message) {
 }
 
 function createTransaction({ item, amount, category, date }) {
+  if (typeof item !== "string") {
+  return {
+    success: false,
+    message: "Please enter a valid item name."
+  };
+}
+
   const cleanItem = item.trim();
   const numericAmount = Number(amount);
   const availableCategories = getAllCategories();

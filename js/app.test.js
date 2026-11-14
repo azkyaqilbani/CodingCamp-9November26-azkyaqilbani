@@ -376,6 +376,17 @@ describe("Transaction creation", () => {
   });
 });
 
+test("rejects a non-string item name", () => {
+  const result = createTransaction({
+    item: null,
+    amount: 25000,
+    category: "Food",
+    date: "2026-11-13"
+  });
+
+  expect(result.success).toBe(false);
+  expect(state.transactions).toHaveLength(0);
+});
 
 describe("Transaction history", () => {
   const olderTransaction = {
